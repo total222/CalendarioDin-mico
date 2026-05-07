@@ -2,13 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"> <!-- Define la codificación de caracteres como UTF-8, soporta acentos y caracteres especiales -->
-  <title>Timer Minimalista</title> <!-- Título de la pestaña del navegador -->
+  <title>Timer</title> <!-- Título de la pestaña del navegador -->
   <style>
     /* Estilos generales del cuerpo */
     body {
       font-family: Arial, sans-serif; /* Fuente simple y clara */
-      background: #fdfdfd;            /* Fondo blanco suave */
-      color: #333;                    /* Texto gris oscuro */
+      background: #0a0a0a;            /* Fondo blanco suave */
+      color: #ffffff;                    /* Texto gris oscuro */
       display: flex;                  /* Flexbox para centrar contenido */
       flex-direction: column;         /* Elementos en columna */
       align-items: center;            /* Centrado horizontal */
@@ -18,12 +18,12 @@
     }
 
     h1 {
-      margin-bottom: 20px;            /* Espacio debajo del título */
       font-weight: 400;               /* Grosor de fuente ligero */
+      font-size: 2.5em;                 /* Tamaño grande para el título */
     }
 
     #display {
-      font-size: 4em;                 /* Tamaño grande para el contador */
+      font-size: 10em;                 /* Tamaño grande para el contador */
       margin: 20px 0;                 /* Espaciado arriba y abajo */
       color: teal;                    /* Color llamativo pero minimalista */
     }
@@ -31,8 +31,9 @@
     /* Estilo común para botones */
     .controls button, .settings button {
       margin: 5px;
-      padding: 10px 20px;
+      padding: 20px 40px;
       border: none;
+      border-radius: 8px;             /* Bordes redondeados */
       background: #eee;               /* Fondo gris claro */
       cursor: pointer;
       font-size: 1em;
@@ -58,25 +59,45 @@
       font-size: 1em;                 /* Tamaño de texto coherente */
       background: #fafafa;            /* Fondo suave */
     }
+    .controls .btn_iniciar {
+      background: #4CAF50;            /* Fondo verde para iniciar */
+      color: white;                   /* Texto blanco */
+    }
+    .controls .btn_pausar {
+      background: #FF9800;            /* Fondo naranja para pausar */
+      color: white;                   /* Texto blanco */
+    }
+    .controls .btn_reiniciar {
+      background: #f44336;            /* Fondo rojo para reiniciar */
+      color: white;                   /* Texto blanco */
+    }
+    .controls .btn_iniciar:hover {
+      background: #45a049;            /* Verde más oscuro al pasar el mouse */
+    }
+    .controls .btn_pausar:hover {
+      background: #e68a00;            /* Naranja más oscuro al pasar el mouse */
+    }
+    .controls .btn_reiniciar:hover {
+      background: #d32f2f;            /* Rojo más oscuro al pasar el mouse */
+    }
   </style>
 </head>
 <body>
-  <h1>Timer Minimalista</h1> <!-- Encabezado principal -->
+  <h1>Timer</h1> <!-- Encabezado principal -->
   
   <div id="display">00:00</div> <!-- Contador inicial en pantalla -->
   
   <div class="controls">
     <!-- Botones de control -->
-    <button onclick="startTimer()">Start</button>
-    <button onclick="pauseTimer()">Pause</button>
-    <button onclick="resetTimer()">Reset</button>
+    <button class="btn_iniciar" onclick="startTimer()">Iniciar</button>
+    <button class="btn_pausar" onclick="pauseTimer()">Pausar</button>
+    <button class="btn_reiniciar" onclick="resetTimer()">Reiniciar</button>
   </div>
   
   <div class="settings">
     <!-- Inputs para personalizar tiempo -->
     <label>Minutos: <input type="number" id="minutes" value="1"></label>
     <label>Segundos: <input type="number" id="seconds" value="0"></label>
-    <button onclick="setCustomTime()">Configurar</button>
   </div>
 
   <!-- Audio de alarma, se repite en bucle -->
@@ -97,6 +118,13 @@
 
     // Inicia el temporizador
     function startTimer() {
+      if(remainingSeconds <= 0) {
+      let min = parseInt(document.getElementById("minutes").value) || 0;
+      let sec = parseInt(document.getElementById("seconds").value) || 0;
+      remainingSeconds = min * 60 + sec; // Convierte a segundos
+      updateDisplay();
+      }
+    
       if (isRunning || remainingSeconds <= 0) return; // Evita iniciar si ya corre o no hay tiempo
       isRunning = true;
       timer = setInterval(() => {
@@ -125,14 +153,6 @@
       updateDisplay();
       document.getElementById("alarmSound").pause();
       document.getElementById("alarmSound").currentTime = 0;
-    }
-
-    // Configura tiempo personalizado desde inputs
-    function setCustomTime() {
-      let min = parseInt(document.getElementById("minutes").value) || 0;
-      let sec = parseInt(document.getElementById("seconds").value) || 0;
-      remainingSeconds = min * 60 + sec; // Convierte a segundos
-      updateDisplay();
     }
 
     // Inicializa display en 00:00
