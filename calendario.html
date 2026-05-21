@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"> <!-- Codificación UTF-8 para soportar caracteres especiales -->
-  <title>Calendario Multifuncional</title> <!-- Título de la pestaña -->
+  <meta charset="UTF-8">
+  <title>Calendario Multifuncional</title>
   <style>
     body {
-      font-family: Arial, sans-serif; /* Fuente simple */
-      background: #121212;            /* Fondo oscuro */
-      color: #f0f0f0;                 /* Texto claro */
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #f0f0f0;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -25,7 +25,7 @@
     }
     .calendar {
       display: grid;
-      grid-template-columns: repeat(7, 1fr); /* 7 columnas para los días */
+      grid-template-columns: repeat(7, 1fr);
       gap: 5px;
       width: 90%;
       max-width: 600px;
@@ -33,77 +33,135 @@
     .day, .header {
       padding: 10px;
       text-align: center;
-      border: 1px solid #444;         /* Bordes oscuros */
+      border: 1px solid #444;
       border-radius: 4px;
     }
     .header {
       font-weight: bold;
-      background: #1e1e1e;            /* Fondo más oscuro para cabecera */
+      background: #1e1e1e;
       color: #f0f0f0;
     }
     .day {
       cursor: pointer;
-      background: #2a2a2a;            /* Fondo gris oscuro */
+      background: #2a2a2a;
       color: #f0f0f0;
+      transition: background 0.3s;
     }
     .day:hover {
-      background: #3a3a3a;            /* Cambio al pasar el mouse */
+      background: #3a3a3a;
+    }
+    .day.selected {
+      background: teal;
+      color: #fff;
     }
     .controls {
       margin: 10px;
     }
-    .controls button {
+    .controls button, .controls label {
       margin: 5px;
       padding: 8px 16px;
       border: none;
-      background: #333;               /* Botones oscuros */
+      background: #333;
       color: #f0f0f0;
       cursor: pointer;
       transition: background 0.3s;
     }
     .controls button:hover {
-      background: #555;               /* Hover más claro */
+      background: #555;
     }
-    #difference {
+    #difference, #events {
       margin-top: 20px;
       font-size: 1.2em;
       color: #f0f0f0;
     }
+    /* Modal */
+    #modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+    }
+    #modalContent {
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    #modalContent input {
+      width: 80%;
+      padding: 8px;
+      margin: 10px 0;
+      border: 1px solid #444;
+      border-radius: 4px;
+      background: #2a2a2a;
+      color: #f0f0f0;
+    }
+    #modalContent button {
+      margin: 5px;
+      padding: 8px 16px;
+      border: none;
+      background: #333;
+      color: #f0f0f0;
+      cursor: pointer;
+    }
+    #modalContent button:hover {
+      background: #555;
+    }
   </style>
 </head>
 <body>
-  <h1>Calendario Multifuncional</h1> <!-- Título principal -->
-  <div id="monthName"></div> <!-- Nombre del mes actual -->
+  <h1>Calendario Multifuncional</h1>
+  <div id="monthName"></div>
   <div class="controls">
     <button onclick="prevMonth()">◀ Mes anterior</button>
     <button onclick="nextMonth()">Mes siguiente ▶</button>
+    <label>
+      <input type="checkbox" id="toggleDiff"> Activar cálculo de diferencia
+    </label>
   </div>
   <div id="calendar" class="calendar"></div>
-  <div id="difference"></div> <!-- Texto donde se mostrará la diferencia de días -->
+  <div id="difference"></div>
+  <div id="events"><h3>Eventos</h3><ul id="eventList"></ul></div>
+
+  <!-- Modal -->
+  <div id="modal">
+    <div id="modalContent">
+      <h3>Agregar evento</h3>
+      <input type="text" id="eventInput" placeholder="Escribe tu evento...">
+      <br>
+      <button onclick="confirmEvent()">Confirmar</button>
+      <button onclick="closeModal()">Cancelar</button>
+    </div>
+  </div>
 
   <script>
-    const calendarEl = document.getElementById("calendar"); // Contenedor del calendario
-    const monthNameEl = document.getElementById("monthName"); // Elemento para mostrar mes
-    const differenceEl = document.getElementById("difference"); // Elemento para mostrar diferencia
+    const calendarEl = document.getElementById("calendar");
+    const monthNameEl = document.getElementById("monthName");
+    const differenceEl = document.getElementById("difference");
+    const toggleDiff = document.getElementById("toggleDiff");
+    const modal = document.getElementById("modal");
+    const eventInput = document.getElementById("eventInput");
+    const eventListEl = document.getElementById("eventList");
 
-    let currentDate = new Date(); // Fecha actual
-    let firstSelected = null;     // Primer día seleccionado
-    let secondSelected = null;    // Segundo día seleccionado
+    let currentDate = new Date();
+    let selectedDays = [];
+    let events = {}; // { "año-mes-día": ["evento1","evento2"] }
+    let currentEventKey = null;
 
-    // Función para renderizar el calendario
     function renderCalendar() {
-      calendarEl.innerHTML = ""; // Limpia el calendario
-      const year = currentDate.getFullYear(); // Año actual
-      const month = currentDate.getMonth();   // Mes actual
-      const firstDay = new Date(year, month, 1).getDay(); // Día de la semana del primer día
-      const daysInMonth = new Date(year, month + 1, 0).getDate(); // Número de días en el mes
+      calendarEl.innerHTML = "";
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-      // Mostrar nombre del mes y año
       const monthNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
                           "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
       monthNameEl.textContent = `${monthNames[month]} ${year}`;
 
-      // Cabeceras de días
       const headers = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
       headers.forEach(h => {
         const headerEl = document.createElement("div");
@@ -112,59 +170,99 @@
         calendarEl.appendChild(headerEl);
       });
 
-      // Espacios vacíos antes del primer día
       for (let i = 0; i < firstDay; i++) {
         const emptyEl = document.createElement("div");
         calendarEl.appendChild(emptyEl);
       }
 
-      // Días del mes
       for (let day = 1; day <= daysInMonth; day++) {
         const dayEl = document.createElement("div");
         dayEl.className = "day";
         dayEl.textContent = day;
-        // Al hacer clic en un día
-        dayEl.onclick = () => selectDay(year, month, day);
+        const key = `${year}-${month}-${day}`;
+
+        if (selectedDays.find(d => d.key === key)) {
+          dayEl.classList.add("selected");
+        }
+
+        dayEl.onclick = () => handleDayClick(year, month, day, dayEl);
         calendarEl.appendChild(dayEl);
       }
     }
-
-    // Función para seleccionar días y calcular diferencia
-    function selectDay(year, month, day) {
-      const selectedDate = new Date(year, month, day); // Fecha seleccionada
-
-      if (!firstSelected) {
-        // Si no hay primer día, se guarda este
-        firstSelected = selectedDate;
-        differenceEl.textContent = `Primer día seleccionado: ${day}/${month+1}/${year}`;
-      } else if (!secondSelected) {
-        // Si ya hay primer día, este es el segundo
-        secondSelected = selectedDate;
-        const diffTime = secondSelected - firstSelected; // Diferencia en milisegundos
-        const diffDays = Math.abs(diffTime / (1000 * 60 * 60 * 24)); // Convertir a días
-        differenceEl.textContent = `Diferencia: ${diffDays} día(s) entre ${firstSelected.getDate()}/${firstSelected.getMonth()+1}/${firstSelected.getFullYear()} y ${secondSelected.getDate()}/${secondSelected.getMonth()+1}/${secondSelected.getFullYear()}`;
-      } else {
-        // Si ya hay dos días, reinicia el mecanismo
-        firstSelected = selectedDate;
-        secondSelected = null;
-        differenceEl.textContent = `Reinicio: nuevo primer día seleccionado: ${day}/${month+1}/${year}`;
-      }
-    }
-
-    // Función para ir al mes anterior
-    function prevMonth() {
+     function prevMonth() {
       currentDate.setMonth(currentDate.getMonth() - 1);
       renderCalendar();
     }
 
-    // Función para ir al mes siguiente
     function nextMonth() {
       currentDate.setMonth(currentDate.getMonth() + 1);
       renderCalendar();
     }
 
-    // Renderizar calendario al inicio
+    function handleDayClick(year, month, day, element) {
+      const key = `${year}-${month}-${day}`;
+      if (toggleDiff.checked) {
+        toggleDay(year, month, day, element);
+      } else {
+        currentEventKey = key;
+        modal.style.display = "flex";
+      }
+    }
+
+    function toggleDay(year, month, day, element) {
+      const key = `${year}-${month}-${day}`;
+      const index = selectedDays.findIndex(d => d.key === key);
+
+      if (index >= 0) {
+        selectedDays.splice(index, 1);
+        element.classList.remove("selected");
+      } else {
+        if (selectedDays.length === 2) {
+          selectedDays.forEach(d => {
+            const prevEl = document.querySelector(`[data-key='${d.key}']`);
+            if (prevEl) prevEl.classList.remove("selected");
+          });
+          selectedDays = [];
+          differenceEl.textContent = "";
+        }
+        selectedDays.push({ key, date: new Date(year, month, day) });
+        element.classList.add("selected");
+        element.setAttribute("data-key", key);
+      }
+
+      if (selectedDays.length === 2) {
+        const diffTime = selectedDays[1].date - selectedDays[0].date;
+        const diffDays = Math.abs(diffTime / (1000 * 60 * 60 * 24));
+        const diffWeeks = Math.floor(diffDays / 7);
+        differenceEl.textContent = `Diferencia: ${diffDays} día(s) (${diffWeeks} semana(s) completas)`;
+      } else {
+        differenceEl.textContent = "";
+      }
+    }
+
+    function confirmEvent() {
+      const text = eventInput.value.trim();
+      if (text !== "" && currentEventKey) {
+        if (!events[currentEventKey]) events[currentEventKey] = [];
+        events[currentEventKey].push(text);
+        updateEventList();
+      }
+      eventInput.value = "";
+      closeModal();
+    }
+
+    function closeModal() {
+      modal.style.display = "none";
+    }
+
+    function updateEventList() {
+      eventListEl.innerHTML = "";
+      for (const key in events) {
+        const li = document.createElement("li");
+        li.textContent = `${key}: ${events[key].join(", ")}`;
+        eventListEl.appendChild(li);
+      }
+    }
     renderCalendar();
-  </script>
+    </script>
 </body>
-</html>
