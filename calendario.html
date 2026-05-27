@@ -199,15 +199,18 @@
       renderCalendar();
     }
 
-    function handleDayClick(year, month, day, element) {
-      const key = `${year}-${month}-${day}`;
-      if (toggleDiff.checked) {
-        toggleDay(year, month, day, element);
-      } else {
-        currentEventKey = key;
-        modal.style.display = "flex";
-      }
-    }
+// Dentro de handleDayClick (cuando se presiona un día)
+function handleDayClick(year, month, day, element) {
+   const key = `${year}-${month}-${day}`;
+
+  // Mostrar eventos existentes debajo del calendario
+  showEventsForDay(key);
+
+  // Abrir modal para añadir un nuevo evento
+  currentEventKey = key;
+  modal.style.display = "flex";
+}
+
 
     function toggleDay(year, month, day, element) {
       const key = `${year}-${month}-${day}`;
@@ -245,7 +248,8 @@
       if (text !== "" && currentEventKey) {
         if (!events[currentEventKey]) events[currentEventKey] = [];
         events[currentEventKey].push(text);
-        updateEventList();
+        saveEvent(currentEventKey, text);
+        updateEventList(loadEvents());
       }
       eventInput.value = "";
       closeModal();
@@ -255,7 +259,7 @@
       modal.style.display = "none";
     }
 
-    function updateEventList() {
+    function updateEventList(events) {
       eventListEl.innerHTML = "";
       for (const key in events) {
         const li = document.createElement("li");
@@ -263,6 +267,67 @@
         eventListEl.appendChild(li);
       }
     }
+    // Guardar evento en localStorage
+function saveEvent(key, text) {
+  let storedEvents = JSON.parse(localStorage.getItem("calendarEvents")) || {};
+  if (!storedEvents[key]) storedEvents[key] = [];
+  storedEvents[key].push(text);
+  localStorage.setItem("calendarEvents", JSON.stringify(storedEvents));
+}
+
+
+// Cargar eventos desde localStorage
+function loadEvents() {
+  return JSON.parse(localStorage.getItem("calendarEvents")) || {};
+}
+
+// Mostrar eventos en lista (ejemplo)
+function updateEventList(events) {
+  const eventListEl = document.getElementById("eventList");
+  eventListEl.innerHTML = "";
+  for (const key in events) {
+    events[key].forEach(ev => {
+      const li = document.createElement("li");
+      li.textContent = `${key}: ${ev}`;
+      eventListEl.appendChild(li);
+    });
+  }
+}
+// Eliminar evento específico
+function deleteEvent(key, index) {
+  let storedEvents = JSON.parse(localStorage.getItem("calendarEvents")) || {};
+  if (storedEvents[key]) {
+    storedEvents[key].splice(index, 1);
+    if (storedEvents[key].length === 0) delete storedEvents[key];
+    localStorage.setItem("calendarEvents", JSON.stringify(storedEvents));
+  }
+  showEventsForDay(key); // refrescar lista
+}
+// Mostrar eventos de un día específico
+function showEventsForDay(key) {
+  const storedEvents = JSON.parse(localStorage.getItem("calendarEvents")) || {};
+  const eventListEl = document.getElementById("eventList");
+  eventListEl.innerHTML = "";
+
+  if (storedEvents[key]) {
+    storedEvents[key].forEach((ev, i) => {
+      const li = document.createElement("li");
+      li.textContent = ev;
+
+      // Botón para eliminar
+      const btn = document.createElement("button");
+      btn.textContent = "❌";
+      btn.style.marginLeft = "10px";
+      btn.onclick = () => deleteEvent(key, i);
+
+      li.appendChild(btn);
+      eventListEl.appendChild(li);
+    });
+  } else {
+    eventListEl.innerHTML = "<li>No hay eventos para este día</li>";
+  }
+}
+
     renderCalendar();
     </script>
 </body>
